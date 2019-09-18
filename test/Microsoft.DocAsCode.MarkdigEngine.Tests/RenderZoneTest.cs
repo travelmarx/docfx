@@ -3,10 +3,7 @@
 
 namespace Microsoft.DocAsCode.MarkdigEngine.Tests
 {
-    using Microsoft.DocAsCode.Common;
-    using Microsoft.DocAsCode.Plugins;
     using Xunit;
-    using System.Linq;
 
     public class RenderZoneTest
     {
@@ -51,8 +48,6 @@ hello
 ::: zone-end
 ";
 
-            var marked = TestUtility.Markup(content, "fake.md");
-
             // assert
             var expected = @"<h1 id=""article-2"" sourceFile=""fake.md"" sourceStartLineNumber=""1"">Article 2</h1>
 <p sourceFile=""fake.md"" sourceStartLineNumber=""3"">Shared content.</p>
@@ -75,8 +70,8 @@ Inline ::: should not end moniker zone.</p>
 <div class=""zone has-target has-pivot"" data-target=""docs"" data-pivot=""csharp7-is-great"" sourceFile=""fake.md"" sourceStartLineNumber=""31"">
 <p sourceFile=""fake.md"" sourceStartLineNumber=""32"">hello</p>
 </div>
-".Replace("\r\n", "\n");
-            Assert.Equal(expected.Replace("\r\n", "\n"), marked.Html);
+";
+            TestUtility.VerifyMarkup(content, expected, lineNumber: true, filePath: "fake.md");
         }
 
         [Fact]
@@ -88,17 +83,7 @@ Inline ::: should not end moniker zone.</p>
             // assert
             var expected = @"<p>::: zone target=&quot;chromeless</p>
 ";
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 0. \"::: zone target=\"chromeless\" is invalid. Invalid attribute \"target\". Values must be terminated with a double quote.", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(source, expected, new[] { "invalid-zone" });
         }
 
         [Fact]
@@ -113,21 +98,9 @@ Inline ::: should not end moniker zone.</p>
             var expected = @"<div class=""zone has-target"" data-target=""chromeless"">
 </div>
 ";
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
 
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source2, TestUtility.MarkupWithoutSourceInfo);
-
-                Assert.Empty(listener.Items);
-
-                TestUtility.AssertEqual(expected, source1, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 0. No \"::: zone-end\" found. Blocks should be explicitly closed.", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(source2, expected);
+            TestUtility.VerifyMarkup(source1, expected, new[] { "invalid-zone" });
         }
 
         [Fact]
@@ -140,17 +113,7 @@ Inline ::: should not end moniker zone.</p>
 ::: zone-end
 ";
 
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.MarkupWithoutSourceInfo(content);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 1. \"::: zone target=\"chromeless\"\r\n::: zone target=\"pdf\"\r\n::: zone-end\r\n::: zone-end\r\n\" is invalid. Zones cannot be nested.", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(content, null, new[] { "invalid-zone" });
         }
 
         [Fact]
@@ -171,16 +134,7 @@ Inline ::: should not end moniker zone.</p>
 </ul>
 </div>
 ";
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Empty(listener.Items);
+            TestUtility.VerifyMarkup(source, expected);
         }
 
         [Fact]
@@ -192,17 +146,7 @@ Inline ::: should not end moniker zone.</p>
             // assert
             var expected = @"<p>::: zone target = &quot;pdf&quot;  pivot = &quot;foo&quot;</p>
 ";
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 0. \"::: zone target = \"pdf\"  pivot = \"foo\"  \" is invalid. Pivot not permitted on pdf target.", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(source, expected, new[] { "invalid-zone" });
         }
 
         [Fact]
@@ -214,18 +158,8 @@ Inline ::: should not end moniker zone.</p>
 
             // assert
             var expected = "<p>::: zone pivot = &quot;**&quot;\n::: zone-end</p>\n";
- 
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
 
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 0. \"::: zone pivot = \"**\"\r\n::: zone-end\" is invalid. Invalid pivot \"**\". Pivot must be a comma-delimited list of pivot names. Pivot names must be lower-case and contain only letters, numbers or dashes.", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(source, expected, new[] { "invalid-zone" });
         }
 
         [Fact]
@@ -238,17 +172,7 @@ Inline ::: should not end moniker zone.</p>
             // assert
             var expected = "<p>::: zone pivot = &quot;a b&quot;\n::: zone-end</p>\n";
 
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 0. \"::: zone pivot = \"a b\"\r\n::: zone-end\" is invalid. Invalid pivot \"a b\". Pivot must be a comma-delimited list of pivot names. Pivot names must be lower-case and contain only letters, numbers or dashes.", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(source, expected, new[] { "invalid-zone" });
         }
 
         [Fact]
@@ -260,16 +184,8 @@ Inline ::: should not end moniker zone.</p>
 
             // assert
             var expected = "<div class=\"zone has-pivot\" data-pivot=\"a b\">\n</div>\n";
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
 
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Empty(listener.Items);
+            TestUtility.VerifyMarkup(source, expected);
         }
 
 
@@ -282,17 +198,7 @@ Inline ::: should not end moniker zone.</p>
             // assert
             var expected = @"<p>::: zone target=&quot;pdf&quot; something</p>
 ";
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 0. \"::: zone target=\"pdf\" something\" is invalid. Unexpected attribute \"something\".", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(source, expected, new[] { "invalid-zone" });
         }
 
         [Fact]
@@ -304,17 +210,7 @@ Inline ::: should not end moniker zone.</p>
             // assert
             var expected = @"<p>::: zone target=&quot;pdf&quot; target=&quot;docs&quot;</p>
 ";
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 0. \"::: zone target=\"pdf\" target=\"docs\"\" is invalid. Attribute \"target\" specified multiple times.", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(source, expected, new[] { "invalid-zone" });
         }
 
         [Fact]
@@ -326,17 +222,7 @@ Inline ::: should not end moniker zone.</p>
             // assert
             var expected = @"<p>::: zone *=&quot;pdf&quot;</p>
 ";
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 0. \"::: zone *=\"pdf\"\" is invalid. Invalid attribute.", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(source, expected, new[] { "invalid-zone" });
         }
 
         [Fact]
@@ -349,17 +235,7 @@ Inline ::: should not end moniker zone.</p>
             // assert
             var expected = "<p>:::zone\n:::zone-end asdjklf</p>\n";
 
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            Assert.Single(listener.Items);
-            Assert.Equal("Invalid zone on line 0. \":::zone\r\n:::zone-end asdjklf\" is invalid. Either target or privot must be specified.", listener.Items[0].Message);
+            TestUtility.VerifyMarkup(source, expected, new[] { "invalid-zone" });
         }
     }
 }

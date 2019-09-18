@@ -4,9 +4,7 @@
 namespace Microsoft.DocAsCode.MarkdigEngine.Tests
 {
     using Markdig.Syntax;
-    using Microsoft.DocAsCode.Common;
     using Microsoft.DocAsCode.MarkdigEngine.Extensions;
-    using Microsoft.DocAsCode.Plugins;
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
@@ -14,8 +12,6 @@ namespace Microsoft.DocAsCode.MarkdigEngine.Tests
 
     public class TripleColonTest
     {
-        static public string LoggerPhase = "TripleColon";
-
         [Fact]
         public void TripleColonTestGeneral()
         {
@@ -27,9 +23,8 @@ namespace Microsoft.DocAsCode.MarkdigEngine.Tests
 <pre><code>hello
 </code></pre>
 </div>
-".Replace("\r\n", "\n");
-
-            TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
+";
+            TestUtility.VerifyMarkup(source, expected);
         }
 
         [Fact]
@@ -46,19 +41,8 @@ namespace Microsoft.DocAsCode.MarkdigEngine.Tests
 <button class=""button is-primary"" disabled=""disabled"" type=""submit"">Create</button>
 </form>
 </div>
-".Replace("\r\n", "\n");
-
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                TestUtility.AssertEqual(expected, source, TestUtility.MarkupWithoutSourceInfo);
-            }
-            Logger.UnregisterListener(listener);
-
-            // Listener should have no error or warning message.
-            Assert.Empty(listener.Items);
+";
+            TestUtility.VerifyMarkup(source, expected);
         }
 
         [Fact]
@@ -75,38 +59,8 @@ namespace Microsoft.DocAsCode.MarkdigEngine.Tests
 <button class=""button is-primary"" disabled=""disabled"" type=""submit"">Create</button>
 </form>
 </div>
-".Replace("\r\n", "\n");
-
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
-
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                var service = TestUtility.CreateMarkdownService();
-                var document = service.Parse(source, "fakepath.md");
-                var blocks = new List<TripleColonBlock>();
-                var stack = new Stack<ContainerBlock>();
-                stack.Push(document);
-
-                // Get all triplecolon blocks in the document using a depth-first iterative tree traversal strategy.
-                do
-                {
-                    var block = stack.Pop();
-                    var children = block.Where(x => x.GetType() == typeof(TripleColonBlock)).Select(x => x as TripleColonBlock);
-                    blocks.AddRange(children);
-                    foreach (var child in children)
-                    {
-                        stack.Push(child);
-                    }
-
-                } while (stack.Count > 0);
-                
-                foreach (var block in blocks)
-                {
-                    Assert.False(block.IsOpen);
-                }
-            }
-            Logger.UnregisterListener(listener);
+";
+            TestUtility.VerifyMarkup(source, expected);
         }
 
         [Fact]
@@ -120,21 +74,13 @@ namespace Microsoft.DocAsCode.MarkdigEngine.Tests
                 .AppendLine("::: moniker-end")
                 .ToString();
 
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
+            var expected = @"<div range=""chromeless"">
+<div class=""zone has-target"" data-target=""docs"">
+<h2 id=""alt-text"">Alt text</h2>
+</div>
+</div>";
 
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                var service = TestUtility.CreateMarkdownService();
-                var document = service.Parse(source, "fakepath.md");
-
-                var monikerBlock = document.OfType<MonikerRangeBlock>().FirstOrDefault();
-                Assert.NotNull(monikerBlock);
-                var nestedZoneBlock = monikerBlock.OfType<TripleColonBlock>().FirstOrDefault();
-                Assert.NotNull(nestedZoneBlock);
-                Assert.True(nestedZoneBlock.Closed);
-            }
-            Logger.UnregisterListener(listener);
+            TestUtility.VerifyMarkup(source, expected);
         }
 
         [Fact]
@@ -147,21 +93,14 @@ namespace Microsoft.DocAsCode.MarkdigEngine.Tests
                 .AppendLine("::: moniker-end")
                 .ToString();
 
-            var listener = TestLoggerListener.CreateLoggerListenerWithPhaseEqualFilter(LoggerPhase);
+            var expected = @"<div range=""chromeless"">
+<div class=""zone has-target"" data-target=""docs"">
+<h2 id=""alt-text"">Alt text</h2>
+</div>
+</div>
+";
 
-            Logger.RegisterListener(listener);
-            using (new LoggerPhaseScope(LoggerPhase))
-            {
-                var service = TestUtility.CreateMarkdownService();
-                var document = service.Parse(source, "fakepath.md");
-
-                var monikerBlock = document.OfType<MonikerRangeBlock>().FirstOrDefault();
-                Assert.NotNull(monikerBlock);
-                var nestedZoneBlock = monikerBlock.OfType<TripleColonBlock>().FirstOrDefault();
-                Assert.NotNull(nestedZoneBlock);
-                Assert.False(nestedZoneBlock.Closed);
-            }
-            Logger.UnregisterListener(listener);
+            TestUtility.VerifyMarkup(source, expected);
         }
     }
 }

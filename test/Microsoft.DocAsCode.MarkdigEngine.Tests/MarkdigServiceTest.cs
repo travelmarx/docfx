@@ -4,14 +4,8 @@
 namespace Microsoft.DocAsCode.MarkdigEngine.Tests
 {
     using System.Collections.Generic;
-    using System.Collections.Immutable;
-    
-    using MarkdigEngine.Extensions;
-
-    using Markdig.Syntax;
     using Xunit;
 
-    [Collection("docfx STA")]
     public class MarkdigServiceTest
     {
         [Fact]
@@ -23,19 +17,13 @@ namespace Microsoft.DocAsCode.MarkdigEngine.Tests
 ```yaml
 key: value
 ```";
-            var service = TestUtility.CreateMarkdownService();
-            var document = service.Parse(markdown, "topic.md");
 
-            Assert.Equal(2, document.Count);
-            Assert.IsType<HeadingBlock>(document[0]);
-            Assert.IsType<FencedCodeBlock>(document[1]);
-
-            var mr = service.Render(document);
             var expected = @"<h1 id=""title"">title</h1>
 <pre><code class=""lang-yaml"">key: value
 </code></pre>
 ";
-            Assert.Equal(expected.Replace("\r\n", "\n"), mr.Html);
+
+            TestUtility.VerifyMarkup(markdown, expected);
         }
 
         [Fact]
@@ -48,35 +36,28 @@ key: value
             //  |  |- linkAndRefRoot.md
             var root = @"[!include[linkAndRefRoot](~/x/b/linkAndRefRoot.md)]";
             var linkAndRefRoot = @"Paragraph1";
-            TestUtility.WriteToFile("x/root.md", root);
-            TestUtility.WriteToFile("x/b/linkAndRefRoot.md", linkAndRefRoot);
 
-            var service = TestUtility.CreateMarkdownService();
-            var document = service.Parse(root, "x/root.md");
+            var expected = @"<p>Paragraph1</p>";
 
-            Assert.Single(document);
-            Assert.IsType<InclusionBlock>(document[0]);
-
-            var mr = service.Render(document);
-            var expected = @"<p>Paragraph1</p>" + "\n";
-            Assert.Equal(expected, mr.Html);
-
-            var expectedDependency = new List<string> { "b/linkAndRefRoot.md" };
-            Assert.Equal(expectedDependency.ToImmutableList(), mr.Dependency);
+            TestUtility.VerifyMarkup(
+                root,
+                expected,
+                filePath: "x/root.md",
+                dependencies: new[] { "b/linkAndRefRoot.md" },
+                files: new Dictionary<string, string>
+                {
+                    { "x/b/linkAndRefRoot.md", linkAndRefRoot },
+                });
         }
 
         [Fact]
         [Trait("Related", "MarkdigService")]
         public void MarkdigServiceTest_ParseInline()
         {
-            var content = @"# I am a heading";
-            var service = TestUtility.CreateMarkdownService();
-            var document = service.Parse(content, "topic.md", true);
-            var result = service.Render(document, true).Html;
+            var markdown = @"# I am a heading";
+            var expected = @"<h1 id=""i-am-a-heading"">I am a heading</h>";
 
-            Assert.Single(document);
-            Assert.IsType<ParagraphBlock>(document[0]);
-            Assert.Equal(content, result);
+            TestUtility.VerifyMarkup(markdown, expected);
         }
     }
 }
